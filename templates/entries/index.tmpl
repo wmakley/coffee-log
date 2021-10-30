@@ -7,7 +7,9 @@
 </head>
 <body>
 <div class="container">
-	<h1>Log Entries</h1>
+	<h2>Add Entry</h2>
+	{{ template "entries/_form.tmpl" .NewEntryForm }}
+	<h2>Previous Entries</h2>
 	<table>
 		<thead>
 		<tr>

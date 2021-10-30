@@ -7,13 +7,32 @@ import (
 	"time"
 )
 
+type EntriesHistory struct {
+	Action      string
+	Stamp       time.Time
+	ID          int64
+	LogID       int64
+	Coffee      sql.NullString
+	Water       sql.NullString
+	Method      sql.NullString
+	Grind       sql.NullString
+	Tasting     sql.NullString
+	AddlNotes   sql.NullString
+	CoffeeGrams sql.NullInt32
+	WaterGrams  sql.NullInt32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Entry struct {
 	ID          int64
 	LogID       int64
 	Coffee      string
+	Water       sql.NullString
 	Method      sql.NullString
 	Grind       sql.NullString
-	Notes       sql.NullString
+	Tasting     sql.NullString
+	AddlNotes   sql.NullString
 	CoffeeGrams sql.NullInt32
 	WaterGrams  sql.NullInt32
 	CreatedAt   time.Time
@@ -21,6 +40,16 @@ type Entry struct {
 }
 
 type Log struct {
+	ID        int64
+	Name      string
+	Slug      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type LogsHistory struct {
+	Action    string
+	Stamp     time.Time
 	ID        int64
 	Name      string
 	Slug      string
