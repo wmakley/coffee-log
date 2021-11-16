@@ -1,64 +1,53 @@
 -- migrate:up
 
+CREATE TABLE users
+(
+	id           BIGSERIAL PRIMARY KEY,
+	display_name VARCHAR(255)        NOT NULL,
+	username     VARCHAR(100) UNIQUE NOT NULL,
+	password     VARCHAR(255)        NOT NULL,
+	time_zone    VARCHAR(100),
+	created_at   TIMESTAMPTZ         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at   TIMESTAMPTZ         NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE logs
 (
 	id         BIGSERIAL PRIMARY KEY,
-	name       VARCHAR(255)        NOT NULL,
+	user_id    BIGINT              NOT NULL,
 	slug       VARCHAR(255) UNIQUE NOT NULL,
-	created_at TIMESTAMP           NOT NULL DEFAULT NOW(),
-	updated_at TIMESTAMP           NOT NULL DEFAULT NOW()
+	created_at TIMESTAMPTZ         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_logs_user_id FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
-CREATE TABLE entries
+CREATE INDEX index_logs_on_user_id ON logs (user_id);
+
+CREATE TABLE log_entries
 (
-	id           BIGSERIAL PRIMARY KEY,
-	log_id       BIGINT       NOT NULL REFERENCES logs (id),
-	coffee       VARCHAR(255) NOT NULL,
-	water        VARCHAR(255),
-	method       VARCHAR(255),
-	grind        VARCHAR(255),
-	tasting      VARCHAR(4000),
-	addl_notes   VARCHAR(4000),
-	coffee_grams INT,
-	water_grams  INT,
-	created_at   TIMESTAMP    NOT NULL DEFAULT NOW(),
-	updated_at   TIMESTAMP    NOT NULL DEFAULT NOW()
+	id            BIGSERIAL PRIMARY KEY,
+	log_id        BIGINT       NOT NULL REFERENCES logs (id),
+	entry_date    TIMESTAMP    NOT NULL,
+	coffee        VARCHAR(255) NOT NULL,
+	water         VARCHAR(255),
+	coffee_grams  INTEGER,
+	water_grams   INTEGER,
+	brew_method   VARCHAR(255),
+	grind_notes   VARCHAR(255),
+	tasting_notes VARCHAR(4000),
+	addl_notes    VARCHAR(4000),
+	deleted_at    TIMESTAMP,
+	created_at    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_log_entries_log_id FOREIGN KEY (log_id) REFERENCES logs (id)
 );
 
-CREATE INDEX idx_entries_log_id ON entries (log_id);
-
-CREATE TABLE logs_history
-(
-	action     CHAR(1)      NOT NULL,
-	stamp      TIMESTAMP    NOT NULL DEFAULT NOW(),
-	id         BIGINT       NOT NULL,
-	name       VARCHAR(255) NOT NULL,
-	slug       VARCHAR(255) NOT NULL,
-	created_at TIMESTAMP    NOT NULL,
-	updated_at TIMESTAMP    NOT NULL
-);
-
-CREATE TABLE entries_history
-(
-	action       CHAR(1)   NOT NULL,
-	stamp        TIMESTAMP NOT NULL DEFAULT NOW(),
-	id           BIGINT    NOT NULL,
-	log_id       BIGINT    NOT NULL,
-	coffee       VARCHAR(255),
-	water        VARCHAR(255),
-	method       VARCHAR(255),
-	grind        VARCHAR(255),
-	tasting      VARCHAR(4000),
-	addl_notes   VARCHAR(4000),
-	coffee_grams INT,
-	water_grams  INT,
-	created_at   TIMESTAMP NOT NULL,
-	updated_at   TIMESTAMP NOT NULL
-);
+CREATE INDEX index_log_entries_on_log_id_and_entry_date
+	ON log_entries (log_id, entry_date)
+	WHERE deleted_at IS NULL;
 
 -- migrate:down
 
-DROP TABLE IF EXISTS entries_history;
-DROP TABLE IF EXISTS entries;
-DROP TABLE IF EXISTS logs_history;
+DROP TABLE IF EXISTS log_entries;
 DROP TABLE IF EXISTS logs;
+DROP TABLE IF EXISTS users;

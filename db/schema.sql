@@ -14,52 +14,42 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: entries; Type: TABLE; Schema: public; Owner: -
+-- Name: banned_ips; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.entries (
+CREATE TABLE public.banned_ips (
+    ip_address character varying(255) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: log_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.log_entries (
     id bigint NOT NULL,
     log_id bigint NOT NULL,
+    entry_date timestamp without time zone NOT NULL,
     coffee character varying(255) NOT NULL,
     water character varying(255),
-    method character varying(255),
-    grind character varying(255),
-    tasting character varying(4000),
-    addl_notes character varying(4000),
     coffee_grams integer,
     water_grams integer,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    brew_method character varying(255),
+    grind_notes character varying(255),
+    tasting_notes character varying(4000),
+    addl_notes character varying(4000),
+    deleted_at timestamp without time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
 --
--- Name: entries_history; Type: TABLE; Schema: public; Owner: -
+-- Name: log_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.entries_history (
-    action character(1) NOT NULL,
-    stamp timestamp without time zone DEFAULT now() NOT NULL,
-    id bigint NOT NULL,
-    log_id bigint NOT NULL,
-    coffee character varying(255),
-    water character varying(255),
-    method character varying(255),
-    grind character varying(255),
-    tasting character varying(4000),
-    addl_notes character varying(4000),
-    coffee_grams integer,
-    water_grams integer,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
-);
-
-
---
--- Name: entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.entries_id_seq
+CREATE SEQUENCE public.log_entries_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -68,10 +58,22 @@ CREATE SEQUENCE public.entries_id_seq
 
 
 --
--- Name: entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: log_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.entries_id_seq OWNED BY public.entries.id;
+ALTER SEQUENCE public.log_entries_id_seq OWNED BY public.log_entries.id;
+
+
+--
+-- Name: login_attempts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.login_attempts (
+    ip_address character varying(255) NOT NULL,
+    attempts integer DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 
 
 --
@@ -80,25 +82,10 @@ ALTER SEQUENCE public.entries_id_seq OWNED BY public.entries.id;
 
 CREATE TABLE public.logs (
     id bigint NOT NULL,
-    name character varying(255) NOT NULL,
+    user_id bigint NOT NULL,
     slug character varying(255) NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: logs_history; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.logs_history (
-    action character(1) NOT NULL,
-    stamp timestamp without time zone DEFAULT now() NOT NULL,
-    id bigint NOT NULL,
-    name character varying(255) NOT NULL,
-    slug character varying(255) NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -131,10 +118,44 @@ CREATE TABLE public.schema_migrations (
 
 
 --
--- Name: entries id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.entries ALTER COLUMN id SET DEFAULT nextval('public.entries_id_seq'::regclass);
+CREATE TABLE public.users (
+    id bigint NOT NULL,
+    display_name character varying(255) NOT NULL,
+    username character varying(100) NOT NULL,
+    password character varying(255) NOT NULL,
+    time_zone character varying(100),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.users_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- Name: log_entries id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.log_entries ALTER COLUMN id SET DEFAULT nextval('public.log_entries_id_seq'::regclass);
 
 
 --
@@ -145,11 +166,34 @@ ALTER TABLE ONLY public.logs ALTER COLUMN id SET DEFAULT nextval('public.logs_id
 
 
 --
--- Name: entries entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.entries
-    ADD CONSTRAINT entries_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: banned_ips banned_ips_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.banned_ips
+    ADD CONSTRAINT banned_ips_pkey PRIMARY KEY (ip_address);
+
+
+--
+-- Name: log_entries log_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.log_entries
+    ADD CONSTRAINT log_entries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: login_attempts login_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_attempts
+    ADD CONSTRAINT login_attempts_pkey PRIMARY KEY (ip_address);
 
 
 --
@@ -177,18 +221,57 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
--- Name: idx_entries_log_id; Type: INDEX; Schema: public; Owner: -
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_entries_log_id ON public.entries USING btree (log_id);
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
 
 --
--- Name: entries entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.entries
-    ADD CONSTRAINT entries_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.logs(id);
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: index_log_entries_on_log_id_and_entry_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_log_entries_on_log_id_and_entry_date ON public.log_entries USING btree (log_id, entry_date) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_logs_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_logs_on_user_id ON public.logs USING btree (user_id);
+
+
+--
+-- Name: log_entries fk_log_entries_log_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.log_entries
+    ADD CONSTRAINT fk_log_entries_log_id FOREIGN KEY (log_id) REFERENCES public.logs(id);
+
+
+--
+-- Name: logs fk_logs_user_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.logs
+    ADD CONSTRAINT fk_logs_user_id FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: log_entries log_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.log_entries
+    ADD CONSTRAINT log_entries_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.logs(id);
 
 
 --
@@ -202,4 +285,4 @@ ALTER TABLE ONLY public.entries
 
 INSERT INTO public.schema_migrations (version) VALUES
     ('20211023221831'),
-    ('20211024132628');
+    ('20211112202539');
