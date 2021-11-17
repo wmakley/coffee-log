@@ -32,21 +32,23 @@ func StoreWithTx(tx *sql.Tx) *Store {
 	}
 }
 
+const (
+	dbKey = "db"
+	txKey = "tx"
+)
+
 // StoreFromCtx get a data store using the context transaction, or create a new one
 // using the context database connection. Panics if either of those cannot be
 // found in the context.
-func StoreFromCtx(ctx *gin.Context) *Store {
-	maybeDb, dbSet := ctx.Get("db")
-	if !dbSet {
-		panic(errors.New("db is not set"))
-	}
+func StoreFromCtx(ctx context.Context) *Store {
+	maybeDb := ctx.Value(dbKey)
 	db, ok := maybeDb.(*sql.DB)
 	if !ok {
 		panic(errors.New("db is not *sql.DB"))
 	}
 
-	maybeTx, txSet := ctx.Get("tx")
-	if !txSet {
+	maybeTx := ctx.Value(txKey)
+	if maybeTx == nil {
 		return NewStore(db)
 	}
 
@@ -58,52 +60,42 @@ func StoreFromCtx(ctx *gin.Context) *Store {
 	return StoreWithTx(tx)
 }
 
-// ProvideDatabase provides the database connection to any Store instances
-// created using StoreFromCtx
-//func ProvideDatabase(db *sql.DB) gin.HandlerFunc {
-//	return func(c *gin.Context) {
-//		c.Set("db", db)
-//		c.Next()
-//	}
-//}
-
 func WrapInTransaction(db *sql.DB, options *sql.TxOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set("db", db)
+		c.Set(dbKey, db)
 
 		tx, err := db.BeginTx(c, options)
 		if err != nil {
-			c.Error(err)
-			c.String(http.StatusInternalServerError, err.Error())
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error starting transaction: %w", err))
 			return
 		}
 
-		c.Set("tx", tx)
+		c.Set(txKey, tx)
 
 		c.Next()
 
 		if len(c.Errors) > 0 {
 			log.Print("rolling back due to errors")
 			if rbErr := tx.Rollback(); rbErr != nil {
-				c.Error(rbErr)
-				c.String(http.StatusInternalServerError,
-					fmt.Sprintf("error rolling back due to prior errors: %v: %v", c.Errors.String(), rbErr))
+				c.AbortWithError(http.StatusInternalServerError,
+					fmt.Errorf("error rolling back due to prior errors: %v: %w", c.Errors, rbErr))
 			}
 			return
 		}
 
 		if commitErr := tx.Commit(); err != nil {
-			c.Error(commitErr)
-			c.String(http.StatusInternalServerError, fmt.Sprintf("error committing: %v", commitErr))
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error committing: %w", commitErr))
 		}
 	}
 }
 
-func (store *Store) transaction(ctx context.Context, fn func(*Queries) error) error {
+
+
+func (store *Store) transaction(ctx context.Context, fn func(*Store) error) error {
 	if store.tx != nil {
 		// we are already in a transaction, some other process
 		// will handle the rollback
-		return fn(New(store.tx))
+		return fn(store)
 	}
 
 	tx, err := store.db.BeginTx(ctx, &sql.TxOptions{
@@ -115,8 +107,12 @@ func (store *Store) transaction(ctx context.Context, fn func(*Queries) error) er
 	}
 	store.tx = tx
 
-	q := New(tx)
-	err = fn(q)
+	innerStore := Store{
+		Queries: New(tx),
+		db:      store.db,
+		tx:      tx,
+	}
+	err = fn(&innerStore)
 	if err != nil {
 		rbErr := tx.Rollback()
 		if rbErr != nil {
@@ -167,7 +163,7 @@ func (store *Store) CheckAndLogLoginAttempt(
 		return user, nil
 	}
 
-	banned, err := store.CreateOrIncrementLoginAttempt(ctx, ipAddress, maxAttempts)
+	banned, err := store.createOrIncrementLoginAttempt(ctx, ipAddress, maxAttempts)
 	if err != nil {
 		return user, err
 	}
@@ -178,7 +174,7 @@ func (store *Store) CheckAndLogLoginAttempt(
 	return user, ErrBadCredentials
 }
 
-func (store *Store) CreateOrIncrementLoginAttempt(ctx context.Context, ip string, maxAttempts int32) (banned bool, err error) {
+func (store *Store) createOrIncrementLoginAttempt(ctx context.Context, ip string, maxAttempts int32) (banned bool, err error) {
 	var attempts LoginAttempt
 
 	attempts, err = store.GetLoginAttempt(ctx, ip)
@@ -215,15 +211,15 @@ func (store *Store) GetLogAndEntriesBySlugOrderByDateDesc(
 	var log2 Log
 	var entries []LogEntry
 
-	err := store.transaction(ctx, func(q *Queries) error {
+	err := store.transaction(ctx, func(store *Store) error {
 		var err error
 
-		log2, err = q.GetLogBySlug(ctx, slug)
+		log2, err = store.GetLogBySlug(ctx, slug)
 		if err != nil {
 			return err
 		}
 
-		entries, err = q.ListLogEntriesByLogIDOrderByDateDesc(ctx, log2.ID)
+		entries, err = store.ListLogEntriesByLogIDOrderByDateDesc(ctx, log2.ID)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				return err
@@ -238,20 +234,24 @@ func (store *Store) GetLogAndEntriesBySlugOrderByDateDesc(
 }
 
 func (store *Store) CreateLogEntry(
-	ctx context.Context, logSlug string, params CreateLogEntryParams,
-) (Log, LogEntry, error) {
+	ctx context.Context,
+	logSlug string,
+	params CreateLogEntryParams,
+) (
+	Log, LogEntry, error,
+) {
 	var log_ Log
 	var logEntry LogEntry
 
-	txErr := store.transaction(ctx, func(queries *Queries) error {
+	txErr := store.transaction(ctx, func(store *Store) error {
 		var err error
-		if log_, err = queries.GetLogBySlug(ctx, logSlug); err != nil {
+		if log_, err = store.Queries.GetLogBySlug(ctx, logSlug); err != nil {
 			return err
 		}
 
 		params.LogID = log_.ID
 
-		if logEntry, err = queries.CreateLogEntry(ctx, params); err != nil {
+		if logEntry, err = store.Queries.CreateLogEntry(ctx, params); err != nil {
 			return err
 		}
 

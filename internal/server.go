@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type Server struct {
@@ -57,4 +58,8 @@ func NewServer(addr string, port int32, db *sql.DB) *Server {
 func (server *Server)Run() error {
 	address := fmt.Sprintf("%s:%d", server.Address, server.Port)
 	return server.router.Run(address)
+}
+
+func (server *Server)ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	server.router.ServeHTTP(w, req)
 }

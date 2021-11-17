@@ -7,6 +7,7 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -18,6 +19,10 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
+	}
+	portInt, err := strconv.ParseInt(port, 10, 32)
+	if err != nil {
+		log.Fatalf("error parsing port number: %+v", err)
 	}
 
 	db, err := sql.Open("postgres", dbUrl)
@@ -31,7 +36,7 @@ func main() {
 		}
 	}(db)
 
-	server := internal.NewServer("0.0.0.0", 8080, db)
+	server := internal.NewServer("0.0.0.0", int32(portInt), db)
 
 	err = server.Run()
 	if err != nil {

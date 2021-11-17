@@ -3,6 +3,9 @@ GO_SRCS := $(shell find . -type f -name '*.go')
 main: migrate sqlc $(GO_SRCS)
 	go build main.go
 
+clean:
+	rm -f ./main
+
 run: main
 	./main
 
