@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type AuthMiddleOptions struct {
+type AuthMiddlewareOptions struct {
 	DbConn      *sql.DB
 	Realm       string
 	MaxAttempts int32
@@ -21,7 +21,7 @@ type AuthMiddleOptions struct {
 
 // AuthMiddleware returns a custom basic authentication middleware with fail2ban
 // that uses the database to store bans and login attempts.
-func AuthMiddleware(options AuthMiddleOptions) gin.HandlerFunc {
+func AuthMiddleware(options AuthMiddlewareOptions) gin.HandlerFunc {
 	realm := "Basic realm=" + strconv.Quote(options.Realm)
 
 	return func(c *gin.Context) {

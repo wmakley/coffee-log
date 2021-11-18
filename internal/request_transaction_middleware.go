@@ -27,7 +27,7 @@ func getTransactionFromContext(ctx context.Context) (*sql.Tx, error) {
 
 	tx, ok := maybeTx.(*sql.Tx)
 	if !ok {
-		return nil, fmt.Errorf("ctx key 'tx' cannot be converted to *sql.Tx")
+		return nil, fmt.Errorf("ctx key '%s' cannot be converted to *sql.Tx", txKey)
 	}
 
 	return tx, nil
@@ -48,11 +48,13 @@ func StoreFromCtx(ctx context.Context, dbConn *sql.DB) *sqlc.Store {
 	return sqlc.StoreWithTx(tx)
 }
 
-func RequestTransaction(db *sql.DB, options *sql.TxOptions) gin.HandlerFunc {
+func RequestTransaction(db *sql.DB, options *sql.TxOptions, debug bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		_, err := getTransactionFromContext(c)
 		if err == nil {
-			log.Print("request already has a transaction, using that instead of beginning new")
+			if debug {
+				log.Print("request already has a transaction, using that instead of beginning new")
+			}
 			c.Next()
 			return
 		} else if err != ErrNoTx {
@@ -60,7 +62,9 @@ func RequestTransaction(db *sql.DB, options *sql.TxOptions) gin.HandlerFunc {
 			return
 		}
 
-		log.Print("beginning new request transaction")
+		if debug {
+			log.Print("beginning new request transaction")
+		}
 		tx, err := db.BeginTx(c, options)
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error starting transaction: %w", err))
@@ -71,7 +75,9 @@ func RequestTransaction(db *sql.DB, options *sql.TxOptions) gin.HandlerFunc {
 		c.Next()
 
 		if len(c.Errors) > 0 {
-			log.Print("rolling back due to errors")
+			if debug {
+				log.Print("rolling back due to errors")
+			}
 			if rbErr := tx.Rollback(); rbErr != nil {
 				c.AbortWithError(http.StatusInternalServerError,
 					fmt.Errorf("error rolling back due to prior errors: %v: %w", c.Errors, rbErr))

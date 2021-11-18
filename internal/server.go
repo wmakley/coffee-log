@@ -27,8 +27,8 @@ func NewServer(db *sql.DB, debug bool) *Server {
 		ReadOnly:  false,
 	}
 
-	r.Use(RequestTransaction(db, &txOptions))
-	r.Use(AuthMiddleware(AuthMiddleOptions{
+	r.Use(RequestTransaction(db, &txOptions, debug))
+	r.Use(AuthMiddleware(AuthMiddlewareOptions{
 		Realm:       "Coffee Log",
 		MaxAttempts: 10,
 		Debug:       debug,
