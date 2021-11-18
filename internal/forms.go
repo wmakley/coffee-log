@@ -1,6 +1,10 @@
 package internal
 
-import "fmt"
+import (
+	"database/sql"
+	"fmt"
+	"strings"
+)
 
 type NewLogEntryForm struct {
 	LogID        int64  `form:"log_id"`
@@ -20,4 +24,19 @@ type ErrInvalidForm struct {
 
 func (e *ErrInvalidForm) Error() string {
 	return fmt.Sprintf("invalid form: %+v", e.ValidationErrors)
+}
+
+func blankToNullString(input string) sql.NullString {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return sql.NullString{
+			String: "",
+			Valid:  false,
+		}
+	}
+
+	return sql.NullString{
+		String: input,
+		Valid:  true,
+	}
 }

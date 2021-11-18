@@ -11,39 +11,61 @@ import (
 	"strings"
 )
 
+type AuthMiddleOptions struct {
+	Realm string
+	MaxAttempts int32
+	Debug bool
+}
+
 // AuthMiddleware returns a custom basic authentication middleware with fail2ban
 // that uses the database to store bans and login attempts.
-func AuthMiddleware(realm string, maxAttempts int32) gin.HandlerFunc {
-	realm = "Basic realm=" + strconv.Quote(realm)
+func AuthMiddleware(options AuthMiddleOptions) gin.HandlerFunc {
+	realm := "Basic realm=" + strconv.Quote(options.Realm)
 
 	return func(c *gin.Context) {
 		store := sqlc.StoreFromCtx(c)
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			if options.Debug {
+				log.Print("authorization header is empty")
+			}
 			authenticationFailure(c, realm)
 			return
 		}
 
 		username, password, err := decodeUsernameAndPassword(authHeader)
 		if err != nil {
-			log.Print("authorization decode error:", err.Error())
+			log.Printf("authorization decode error: %+v", err)
 			authenticationFailure(c, realm)
 			return
 		}
 
 		ip := c.ClientIP()
-		user, err := store.CheckAndLogLoginAttempt(c, ip, username, password, maxAttempts)
+		user, err := store.CheckAndLogLoginAttempt(c, ip, username, password, options.MaxAttempts)
 		if err != nil {
 			if err == sqlc.ErrBadCredentials {
+				if options.Debug {
+					log.Print("bad username or password")
+				}
 				authenticationFailure(c, realm)
 			} else if err == sqlc.ErrIPBanned {
+				if options.Debug {
+					log.Print("ip address is banned")
+				}
 				implementIPBan(c)
 			} else {
+				if options.Debug {
+					log.Printf("unexpected error: %+v", err)
+				}
 				// roll back transaction
 				c.AbortWithError(http.StatusInternalServerError, err)
 			}
 			return
+		}
+
+		if options.Debug {
+			log.Print("authentication success, username=", user.Username)
 		}
 
 		c.Set("user", &user)
@@ -53,10 +75,10 @@ func AuthMiddleware(realm string, maxAttempts int32) gin.HandlerFunc {
 }
 
 func decodeUsernameAndPassword(rawHeader string) (username string, password string, err error) {
-	encodedCredentials := strings.TrimPrefix(rawHeader, "Basic ")
+	encodedCredentials := []byte(strings.TrimPrefix(rawHeader, "Basic "))
 
-	var usernamePasswdBytes []byte
-	if _, err = base64.StdEncoding.Decode(usernamePasswdBytes, []byte(encodedCredentials)); err != nil {
+	usernamePasswdBytes := make([]byte, len(encodedCredentials))
+	if _, err = base64.StdEncoding.Decode(usernamePasswdBytes, encodedCredentials); err != nil {
 		err = fmt.Errorf("base64 decode error: %w", err)
 		return
 	}

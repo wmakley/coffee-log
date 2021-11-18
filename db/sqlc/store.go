@@ -13,7 +13,8 @@ import (
 type Store struct {
 	*Queries
 	db *sql.DB
-	tx *sql.Tx
+	tx    *sql.Tx
+	Debug bool
 }
 
 func NewStore(db *sql.DB) *Store {
@@ -114,6 +115,9 @@ func (store *Store) transaction(ctx context.Context, fn func(*Store) error) erro
 	}
 	err = fn(&innerStore)
 	if err != nil {
+		if store.Debug {
+			log.Print("rolling back transaction")
+		}
 		rbErr := tx.Rollback()
 		if rbErr != nil {
 			return fmt.Errorf("transaction err: %+v, rollback error: %+v", err, rbErr)
@@ -121,6 +125,9 @@ func (store *Store) transaction(ctx context.Context, fn func(*Store) error) erro
 		return err
 	}
 
+	if store.Debug {
+		log.Print("committing transaction")
+	}
 	commitErr := tx.Commit()
 	store.tx = nil
 	return commitErr

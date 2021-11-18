@@ -12,8 +12,9 @@ run: main
 sqlc:
 	sqlc generate
 
-test: migrate-test sqlc
+test: clean-test migrate-test sqlc
 	go test ./db/sqlc
+	go test ./internal
 
 migrate:
 	dbmate up

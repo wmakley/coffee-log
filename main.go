@@ -16,14 +16,15 @@ func main() {
 	}
 
 	dbUrl := os.Getenv("DATABASE_URL")
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	portString := os.Getenv("PORT")
+	if portString == "" {
+		portString = "8080"
 	}
-	portInt, err := strconv.ParseInt(port, 10, 32)
+	portInt64, err := strconv.ParseInt(portString, 10, 32)
 	if err != nil {
 		log.Fatalf("error parsing port number: %+v", err)
 	}
+	port := int32(portInt64)
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
@@ -36,9 +37,9 @@ func main() {
 		}
 	}(db)
 
-	server := internal.NewServer("0.0.0.0", int32(portInt), db)
+	server := internal.NewServer(db)
 
-	err = server.Run()
+	err = server.Run("",  port)
 	if err != nil {
 		log.Fatalf("run error: %+v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/require"
 	_ "github.com/lib/pq"
 	"log"
 	"math/rand"
@@ -47,19 +48,13 @@ func TestCheckAndLogLoginAttempt_ValidCredentials(t *testing.T) {
 			Password:    "password",
 			TimeZone:    sql.NullString{},
 		})
-		if err != nil {
-			t.Fatalf("error creating test user: %+v", err)
-		}
+		require.NoError(t, err)
 
 		ip := fmt.Sprintf("%d", rand.Int31())
 		loggedInUser, err := store.CheckAndLogLoginAttempt(ctx, ip, user.Username, user.Password, 5)
-		if err != nil {
-			t.Fatalf("unexpected error testing correct username and password: %+v", err)
-		}
+		require.NoError(t, err)
 
-		if loggedInUser != user {
-			t.Errorf("expected %v to be equal to %v", loggedInUser, user)
-		}
+		require.Equal(t, loggedInUser, user)
 	})
 }
 
@@ -75,14 +70,10 @@ func TestCheckAndLogLoginAttempt_BadCredentials(t *testing.T) {
 
 		for i := int32(0); i < maxAttempts-1; i++ {
 			_, err = store.CheckAndLogLoginAttempt(ctx, ip, username, password, maxAttempts)
-			if err != ErrBadCredentials {
-				t.Fatalf("expected ErrBadCredentials, but got: %+v", err)
-			}
+			require.ErrorIs(t, err, ErrBadCredentials)
 		}
 
 		_, err = store.CheckAndLogLoginAttempt(ctx, ip, username, password, maxAttempts)
-		if err != ErrIPBanned {
-			t.Errorf("expected ErrIPBanned, but got %+v", err)
-		}
+		require.ErrorIs(t, err, ErrIPBanned)
 	})
 }

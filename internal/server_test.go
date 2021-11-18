@@ -1,34 +1,35 @@
 package internal
 
 import (
+	"coffee-log/db/sqlc"
+	"context"
 	"database/sql"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/require"
 	"log"
 	"math/rand"
+	"net/http"
+	"net/http/httptest"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 )
 
-var server *Server
+var (
+	db     *sql.DB
+	server *Server
+)
 
 func TestMain(m *testing.M) {
-	if err := godotenv.Load("../../.env"); err != nil {
+	if err := godotenv.Load("../.env"); err != nil {
 		log.Fatalf("Error loading .env file: %+v", err)
 	}
 
-	dbUrl := os.Getenv("TEST_DATABASE_URL")
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	portInt, err := strconv.ParseInt(port, 10, 32)
-	if err != nil {
-		log.Fatalf("error parsing port number: %+v", err)
-	}
+	testDatabaseURL := os.Getenv("TEST_DATABASE_URL")
 
-	db, err := sql.Open("postgres", dbUrl)
+	var err error
+	db, err = sql.Open("postgres", testDatabaseURL)
 	if err != nil {
 		log.Fatalf("error connecting to database: %+v", err)
 	}
@@ -41,14 +42,28 @@ func TestMain(m *testing.M) {
 
 	rand.Seed(time.Now().UnixMilli())
 
-	server = NewServer("0.0.0.0", int32(portInt), db)
-	if err = server.Run(); err != nil {
-		log.Fatalf("error running server: %+v", err)
-	}
+	server = NewServer(db)
 
 	os.Exit(m.Run())
 }
 
-func TestLogsIndex(t *testing.T) {
+func TestRootPath(t *testing.T) {
+	sqlc.Rollback(t, db, func(ctx context.Context, store *sqlc.Store) {
+		_, err := store.CreateUser(ctx, sqlc.CreateUserParams{
+			DisplayName: "Test",
+			Username:    "test",
+			Password:    "test",
+		})
+		require.NoError(t, err)
 
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		req.SetBasicAuth("test", "test")
+
+		server.ServeHTTP(w, req)
+
+		t.Log("Response", w.Result())
+
+		require.Equal(t, http.StatusFound, w.Code)
+	})
 }
