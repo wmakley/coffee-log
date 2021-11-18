@@ -19,11 +19,11 @@ type LogEntriesController struct {
 }
 
 type LogEntriesIndexParams struct {
-	ShowLogParams
+	logID string `uri:"log_id" binding:"required"`
 }
 
 func (o *LogEntriesController) Index(ctx *gin.Context) {
-	params := LogEntriesIndexParams{}
+	var params LogEntriesIndexParams
 	if err := ctx.ShouldBindUri(&params); err != nil {
 		ctx.Error(err)
 		ctx.String(http.StatusNotFound, errorResponse(err))

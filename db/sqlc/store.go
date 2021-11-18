@@ -34,11 +34,15 @@ func StoreWithTx(tx *sql.Tx) *Store {
 /// transaction is an internal method using for manually creating transactions
 func (store *Store) transaction(ctx context.Context, fn func(*Store) error) error {
 	if store.tx != nil {
-		log.Print("store transaction: store already has a transaction, re-using that instead of beginning new")
+		if store.Debug {
+			log.Print("store transaction: store already has a transaction, re-using that instead of beginning new")
+		}
 		return fn(store)
 	}
 
-	log.Print("store transaction: beginning")
+	if store.Debug {
+		log.Print("store transaction: beginning")
+	}
 	tx, err := store.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelRepeatableRead,
 		ReadOnly:  false,

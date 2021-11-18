@@ -9,7 +9,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"log"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -39,12 +38,12 @@ func TestMain(m *testing.M) {
 		}
 	}(db)
 
-	server = NewServer(db, true)
+	server = NewServer(db, false)
 
 	os.Exit(m.Run())
 }
 
-func TestRootPath(t *testing.T) {
+func TestRootPathRedirectsToLogEntries(t *testing.T) {
 	ctx := context.Background()
 	store := sqlc.NewStore(db)
 
@@ -60,12 +59,20 @@ func TestRootPath(t *testing.T) {
 	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/", nil).WithContext(ctx)
-	req.SetBasicAuth(user.Username, user.Password)
+	req := util.NewTestRequest("GET", "/", nil, user.BasicCredentials())
 
 	server.ServeHTTP(w, req)
+	res := w.Result()
 
-	t.Logf("Response: %+v", w.Result())
+	util.AssertRedirectedTo(t,"/logs/" + user.Username + "/entries/", 302, res)
 
-	require.Equal(t, http.StatusFound, w.Code)
+	// new request to follow redirect
+	req = util.FollowRedirect(t, res, user.BasicCredentials())
+	w = httptest.NewRecorder()
+	server.ServeHTTP(w, req)
+
+	res = w.Result()
+	_ = util.ReadAndLogBody(t, res)
+	require.Equal(t, 200, res.StatusCode)
+	require.Equal(t, "text/html", res.Header.Get("content-type"))
 }

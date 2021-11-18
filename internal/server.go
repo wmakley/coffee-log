@@ -45,7 +45,7 @@ func NewServer(db *sql.DB, debug bool) *Server {
 		logs.GET("/:log_id", logsController.FindLogAndRedirectToEntries)
 	}
 
-	logEntries := logs.Group("/:log_id/log_entries")
+	logEntries := logs.Group("/:log_id/entries")
 	{
 		logEntriesController := NewLogEntriesController(db)
 		logEntries.GET("/", logEntriesController.Index)

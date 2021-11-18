@@ -42,7 +42,7 @@ func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries")
+	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries/")
 }
 
 func (con *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Context) {
@@ -71,5 +71,5 @@ func (con *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Con
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries")
+	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries/")
 }
