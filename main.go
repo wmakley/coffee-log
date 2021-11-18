@@ -37,7 +37,7 @@ func main() {
 		}
 	}(db)
 
-	server := internal.NewServer(db)
+	server := internal.NewServer(db, false)
 
 	err = server.Run("",  port)
 	if err != nil {

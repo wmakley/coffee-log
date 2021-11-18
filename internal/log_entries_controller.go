@@ -8,11 +8,14 @@ import (
 	"time"
 )
 
-func NewLogEntriesController() *LogEntriesController {
-	return &LogEntriesController{}
+func NewLogEntriesController(db *sql.DB) *LogEntriesController {
+	return &LogEntriesController{
+		db: db,
+	}
 }
 
 type LogEntriesController struct {
+	db *sql.DB
 }
 
 type LogEntriesIndexParams struct {
@@ -27,7 +30,7 @@ func (o *LogEntriesController) Index(ctx *gin.Context) {
 		return
 	}
 
-	store := sqlc.StoreFromCtx(ctx)
+	store := StoreFromCtx(ctx, o.db)
 
 	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(ctx, params.logID)
 	if err != nil {
@@ -92,7 +95,7 @@ func (o *LogEntriesController) Create(ctx *gin.Context) {
 		return
 	}
 
-	store := sqlc.StoreFromCtx(ctx)
+	store := StoreFromCtx(ctx, o.db)
 
 	arg := sqlc.CreateLogEntryParams{
 		LogID:        0,

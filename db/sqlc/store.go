@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
-	"net/http"
 )
 
 type Store struct {
@@ -33,72 +31,14 @@ func StoreWithTx(tx *sql.Tx) *Store {
 	}
 }
 
-const (
-	dbKey = "db"
-	txKey = "tx"
-)
-
-// StoreFromCtx get a data store using the context transaction, or create a new one
-// using the context database connection. Panics if either of those cannot be
-// found in the context.
-func StoreFromCtx(ctx context.Context) *Store {
-	maybeDb := ctx.Value(dbKey)
-	db, ok := maybeDb.(*sql.DB)
-	if !ok {
-		panic(errors.New("db is not *sql.DB"))
-	}
-
-	maybeTx := ctx.Value(txKey)
-	if maybeTx == nil {
-		return NewStore(db)
-	}
-
-	tx, ok := maybeTx.(*sql.Tx)
-	if !ok {
-		panic(fmt.Errorf("ctx key 'tx' cannot be converted to *sql.Tx"))
-	}
-
-	return StoreWithTx(tx)
-}
-
-func WrapInTransaction(db *sql.DB, options *sql.TxOptions) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set(dbKey, db)
-
-		tx, err := db.BeginTx(c, options)
-		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error starting transaction: %w", err))
-			return
-		}
-
-		c.Set(txKey, tx)
-
-		c.Next()
-
-		if len(c.Errors) > 0 {
-			log.Print("rolling back due to errors")
-			if rbErr := tx.Rollback(); rbErr != nil {
-				c.AbortWithError(http.StatusInternalServerError,
-					fmt.Errorf("error rolling back due to prior errors: %v: %w", c.Errors, rbErr))
-			}
-			return
-		}
-
-		if commitErr := tx.Commit(); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error committing: %w", commitErr))
-		}
-	}
-}
-
-
-
+/// transaction is an internal method using for manually creating transactions
 func (store *Store) transaction(ctx context.Context, fn func(*Store) error) error {
 	if store.tx != nil {
-		// we are already in a transaction, some other process
-		// will handle the rollback
+		log.Print("store transaction: store already has a transaction, re-using that instead of beginning new")
 		return fn(store)
 	}
 
+	log.Print("store transaction: beginning")
 	tx, err := store.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelRepeatableRead,
 		ReadOnly:  false,
@@ -110,13 +50,13 @@ func (store *Store) transaction(ctx context.Context, fn func(*Store) error) erro
 
 	innerStore := Store{
 		Queries: New(tx),
-		db:      store.db,
+		db:      nil,
 		tx:      tx,
 	}
 	err = fn(&innerStore)
 	if err != nil {
 		if store.Debug {
-			log.Print("rolling back transaction")
+			log.Print("store transaction: rolling back")
 		}
 		rbErr := tx.Rollback()
 		if rbErr != nil {
@@ -126,7 +66,7 @@ func (store *Store) transaction(ctx context.Context, fn func(*Store) error) erro
 	}
 
 	if store.Debug {
-		log.Print("committing transaction")
+		log.Print("store transaction: committing")
 	}
 	commitErr := tx.Commit()
 	store.tx = nil
@@ -266,4 +206,15 @@ func (store *Store) CreateLogEntry(
 	})
 
 	return log_, logEntry, txErr
+}
+
+func (store *Store) DeleteAllLoginAttemptsAndBans(ctx context.Context) error {
+	return store.transaction(ctx, func(store *Store) error {
+		err := store.DeleteAllBannedIPs(ctx)
+		if err != nil {
+			return err
+		}
+
+		return store.DeleteAllLoginAttempts(ctx)
+	})
 }

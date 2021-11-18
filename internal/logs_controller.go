@@ -7,18 +7,21 @@ import (
 	"net/http"
 )
 
-func NewLogsController() *LogsController {
-	return &LogsController{}
+func NewLogsController(db *sql.DB) *LogsController {
+	return &LogsController{
+		db: db,
+	}
 }
 
 type LogsController struct {
+	db *sql.DB
 }
 
 type ShowLogParams struct {
 	logID string `uri:"log_id" binding:"required"`
 }
 
-func (o *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
+func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 	params := ShowLogParams{}
 	if err := c.ShouldBindUri(&params); err != nil {
 		c.Error(err)
@@ -26,7 +29,7 @@ func (o *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 		return
 	}
 
-	store := sqlc.StoreFromCtx(c)
+	store := StoreFromCtx(c, con.db)
 
 	log, err := store.GetLogBySlug(c, params.logID)
 	if err != nil {
@@ -39,7 +42,7 @@ func (o *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/logs/" + log.Slug + "/entries")
+	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries")
 }
 
 func (con *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Context) {
@@ -52,7 +55,7 @@ func (con *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Con
 		panic("user is not *sqlc.User")
 	}
 
-	store := sqlc.StoreFromCtx(c)
+	store := StoreFromCtx(c, con.db)
 
 	log, err := store.GetLogByUserId(c, user.ID)
 
@@ -68,5 +71,5 @@ func (con *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Con
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/logs/" + log.Slug + "/entries")
+	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries")
 }

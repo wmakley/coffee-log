@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"coffee-log/db/sqlc"
 	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -9,12 +8,12 @@ import (
 )
 
 type Server struct {
-	db *sql.DB
+	db     *sql.DB
 	router *gin.Engine
 }
 
-func NewServer(db *sql.DB) *Server {
-	server := Server {
+func NewServer(db *sql.DB, debug bool) *Server {
+	server := Server{
 		db: db,
 	}
 
@@ -28,14 +27,15 @@ func NewServer(db *sql.DB) *Server {
 		ReadOnly:  false,
 	}
 
-	r.Use(sqlc.WrapInTransaction(db, &txOptions))
+	r.Use(RequestTransaction(db, &txOptions))
 	r.Use(AuthMiddleware(AuthMiddleOptions{
 		Realm:       "Coffee Log",
 		MaxAttempts: 10,
-		Debug:       true,
+		Debug:       debug,
+		DbConn:      db,
 	}))
 
-	logsController := NewLogsController()
+	logsController := NewLogsController(db)
 
 	r.GET("/", logsController.FindOrCreateLogForUserAndRedirectToEntries)
 
@@ -47,7 +47,7 @@ func NewServer(db *sql.DB) *Server {
 
 	logEntries := logs.Group("/:log_id/log_entries")
 	{
-		logEntriesController := NewLogEntriesController()
+		logEntriesController := NewLogEntriesController(db)
 		logEntries.GET("/", logEntriesController.Index)
 		logEntries.POST("/", logEntriesController.Create)
 	}
@@ -55,10 +55,10 @@ func NewServer(db *sql.DB) *Server {
 	return &server
 }
 
-func (server *Server)Run(address string, port int32) error {
+func (server *Server) Run(address string, port int32) error {
 	return server.router.Run(fmt.Sprintf("%s:%d", address, port))
 }
 
-func (server *Server)ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (server *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	server.router.ServeHTTP(w, req)
 }

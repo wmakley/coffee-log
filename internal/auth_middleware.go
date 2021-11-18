@@ -2,6 +2,7 @@ package internal
 
 import (
 	"coffee-log/db/sqlc"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -12,9 +13,10 @@ import (
 )
 
 type AuthMiddleOptions struct {
-	Realm string
+	DbConn      *sql.DB
+	Realm       string
 	MaxAttempts int32
-	Debug bool
+	Debug       bool
 }
 
 // AuthMiddleware returns a custom basic authentication middleware with fail2ban
@@ -23,7 +25,7 @@ func AuthMiddleware(options AuthMiddleOptions) gin.HandlerFunc {
 	realm := "Basic realm=" + strconv.Quote(options.Realm)
 
 	return func(c *gin.Context) {
-		store := sqlc.StoreFromCtx(c)
+		store := StoreFromCtx(c, options.DbConn)
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -36,9 +38,15 @@ func AuthMiddleware(options AuthMiddleOptions) gin.HandlerFunc {
 
 		username, password, err := decodeUsernameAndPassword(authHeader)
 		if err != nil {
-			log.Printf("authorization decode error: %+v", err)
+			if options.Debug {
+				log.Printf("authorization decode error: %+v", err)
+			}
 			authenticationFailure(c, realm)
 			return
+		}
+
+		if options.Debug {
+			log.Printf("got username: %s, password: %s from header", username, password)
 		}
 
 		ip := c.ClientIP()
@@ -75,10 +83,10 @@ func AuthMiddleware(options AuthMiddleOptions) gin.HandlerFunc {
 }
 
 func decodeUsernameAndPassword(rawHeader string) (username string, password string, err error) {
-	encodedCredentials := []byte(strings.TrimPrefix(rawHeader, "Basic "))
+	encodedCredentials := strings.TrimPrefix(rawHeader, "Basic ")
 
-	usernamePasswdBytes := make([]byte, len(encodedCredentials))
-	if _, err = base64.StdEncoding.Decode(usernamePasswdBytes, encodedCredentials); err != nil {
+	usernamePasswdBytes, err := base64.StdEncoding.DecodeString(encodedCredentials)
+	if err != nil {
 		err = fmt.Errorf("base64 decode error: %w", err)
 		return
 	}

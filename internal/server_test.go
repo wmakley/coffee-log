@@ -2,18 +2,17 @@ package internal
 
 import (
 	"coffee-log/db/sqlc"
+	"coffee-log/util"
 	"context"
 	"database/sql"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 )
 
 var (
@@ -40,30 +39,33 @@ func TestMain(m *testing.M) {
 		}
 	}(db)
 
-	rand.Seed(time.Now().UnixMilli())
-
-	server = NewServer(db)
+	server = NewServer(db, true)
 
 	os.Exit(m.Run())
 }
 
 func TestRootPath(t *testing.T) {
-	sqlc.Rollback(t, db, func(ctx context.Context, store *sqlc.Store) {
-		_, err := store.CreateUser(ctx, sqlc.CreateUserParams{
-			DisplayName: "Test",
-			Username:    "test",
-			Password:    "test",
-		})
-		require.NoError(t, err)
+	ctx := context.Background()
+	store := sqlc.NewStore(db)
 
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/", nil)
-		req.SetBasicAuth("test", "test")
-
-		server.ServeHTTP(w, req)
-
-		t.Log("Response", w.Result())
-
-		require.Equal(t, http.StatusFound, w.Code)
+	user, err := store.CreateUser(ctx, sqlc.CreateUserParams{
+		DisplayName: "Test",
+		Username:    util.RandomUsername(),
+		Password:    util.RandomPassword(),
 	})
+	require.NoError(t, err)
+	t.Logf("created test user: %+v", user)
+
+	err = store.DeleteAllLoginAttemptsAndBans(ctx)
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil).WithContext(ctx)
+	req.SetBasicAuth(user.Username, user.Password)
+
+	server.ServeHTTP(w, req)
+
+	t.Logf("Response: %+v", w.Result())
+
+	require.Equal(t, http.StatusFound, w.Code)
 }
