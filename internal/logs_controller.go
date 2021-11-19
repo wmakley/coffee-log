@@ -18,7 +18,7 @@ type LogsController struct {
 }
 
 type ShowLogParams struct {
-	logID string `uri:"log_id" binding:"required"`
+	LogID string `uri:"log_id" binding:"required"`
 }
 
 func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
@@ -31,7 +31,7 @@ func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 
 	store := StoreFromCtx(c, con.db)
 
-	log, err := store.GetLogBySlug(c, params.logID)
+	log, err := store.GetLogBySlug(c, params.LogID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.String(http.StatusNotFound, "log not found")

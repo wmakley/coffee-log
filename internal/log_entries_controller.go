@@ -19,7 +19,7 @@ type LogEntriesController struct {
 }
 
 type LogEntriesIndexParams struct {
-	logID string `uri:"log_id" binding:"required string"`
+	LogID string `uri:"log_id" binding:"required"`
 }
 
 func (o *LogEntriesController) Index(c *gin.Context) {
@@ -32,11 +32,11 @@ func (o *LogEntriesController) Index(c *gin.Context) {
 
 	store := StoreFromCtx(c, o.db)
 
-	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.logID)
+	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.LogID)
 	if err != nil {
 		c.Error(err)
 		if err == sql.ErrNoRows {
-			c.String(http.StatusNotFound, "Log '%s' not found", params.logID)
+			c.String(http.StatusNotFound, "Log '%s' not found", params.LogID)
 		} else {
 			c.String(http.StatusInternalServerError, errorResponse(err))
 		}
@@ -116,11 +116,11 @@ func (o *LogEntriesController) Create(ctx *gin.Context) {
 		},
 	}
 
-	log_, logEntry, err := store.CreateLogEntry(ctx, params.logID, arg)
+	log_, logEntry, err := store.CreateLogEntry(ctx, params.LogID, arg)
 	if err != nil {
 		ctx.Error(err)
 		if err == sql.ErrNoRows {
-			ctx.String(http.StatusNotFound, "log '%s' not found", params.logID)
+			ctx.String(http.StatusNotFound, "log '%s' not found", params.LogID)
 		} else {
 			ctx.String(http.StatusInternalServerError, errorResponse(err))
 		}
