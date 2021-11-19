@@ -12,30 +12,36 @@ type Server struct {
 	router *gin.Engine
 }
 
-func NewServer(db *sql.DB, debug bool) *Server {
+type ServerConfig struct {
+	DB           *sql.DB
+	TemplateRoot string
+	Debug        bool
+}
+
+func NewServer(config *ServerConfig) *Server {
 	server := Server{
-		db: db,
+		db: config.DB,
 	}
 
 	r := gin.Default()
 	server.router = r
 
-	r.LoadHTMLGlob("../templates/**/*")
+	r.LoadHTMLGlob(config.TemplateRoot + "templates/**/*")
 
 	txOptions := sql.TxOptions{
 		Isolation: sql.LevelRepeatableRead,
 		ReadOnly:  false,
 	}
 
-	r.Use(RequestTransaction(db, &txOptions, debug))
+	r.Use(RequestTransaction(config.DB, &txOptions, config.Debug))
 	r.Use(AuthMiddleware(AuthMiddlewareOptions{
 		Realm:       "Coffee Log",
 		MaxAttempts: 10,
-		Debug:       debug,
-		DbConn:      db,
+		Debug:       config.Debug,
+		DbConn:      config.DB,
 	}))
 
-	logsController := NewLogsController(db)
+	logsController := NewLogsController(config.DB)
 
 	r.GET("/", logsController.FindOrCreateLogForUserAndRedirectToEntries)
 
@@ -47,7 +53,7 @@ func NewServer(db *sql.DB, debug bool) *Server {
 
 	logEntries := logs.Group("/:log_id/entries")
 	{
-		logEntriesController := NewLogEntriesController(db)
+		logEntriesController := NewLogEntriesController(config.DB)
 		logEntries.GET("/", logEntriesController.Index)
 		logEntries.POST("/", logEntriesController.Create)
 	}

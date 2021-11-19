@@ -19,26 +19,26 @@ type LogEntriesController struct {
 }
 
 type LogEntriesIndexParams struct {
-	logID string `uri:"log_id" binding:"required"`
+	logID string `uri:"log_id" binding:"required string"`
 }
 
-func (o *LogEntriesController) Index(ctx *gin.Context) {
+func (o *LogEntriesController) Index(c *gin.Context) {
 	var params LogEntriesIndexParams
-	if err := ctx.ShouldBindUri(&params); err != nil {
-		ctx.Error(err)
-		ctx.String(http.StatusNotFound, errorResponse(err))
+	if err := c.ShouldBindUri(&params); err != nil {
+		c.Error(err)
+		c.String(http.StatusNotFound, errorResponse(err))
 		return
 	}
 
-	store := StoreFromCtx(ctx, o.db)
+	store := StoreFromCtx(c, o.db)
 
-	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(ctx, params.logID)
+	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.logID)
 	if err != nil {
-		ctx.Error(err)
+		c.Error(err)
 		if err == sql.ErrNoRows {
-			ctx.String(http.StatusNotFound, "Log '%s' not found", params.logID)
+			c.String(http.StatusNotFound, "Log '%s' not found", params.logID)
 		} else {
-			ctx.String(http.StatusInternalServerError, errorResponse(err))
+			c.String(http.StatusInternalServerError, errorResponse(err))
 		}
 		return
 	}
@@ -59,7 +59,7 @@ func (o *LogEntriesController) Index(ctx *gin.Context) {
 		WaterGrams:   lastEntry.WaterGrams.Int32,
 	}
 
-	ctx.HTML(http.StatusOK, "entries/index.tmpl", gin.H{
+	c.HTML(http.StatusOK, "entries/index.tmpl", gin.H{
 		"Log":          log2,
 		"Entries":      entries,
 		"NewEntryForm": createEntryForm,

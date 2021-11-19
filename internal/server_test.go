@@ -38,7 +38,11 @@ func TestMain(m *testing.M) {
 		}
 	}(db)
 
-	server = NewServer(db, false)
+	server = NewServer(&ServerConfig{
+		DB:           db,
+		TemplateRoot: "../",
+		Debug:        false,
+	})
 
 	os.Exit(m.Run())
 }

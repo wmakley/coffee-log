@@ -37,7 +37,11 @@ func main() {
 		}
 	}(db)
 
-	server := internal.NewServer(db, false)
+	server := internal.NewServer(&internal.ServerConfig{
+		DB:           db,
+		TemplateRoot: "",
+		Debug:        false,
+	})
 
 	err = server.Run("",  port)
 	if err != nil {
