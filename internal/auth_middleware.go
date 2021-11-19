@@ -4,6 +4,7 @@ import (
 	"coffee-log/db/sqlc"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -17,6 +18,24 @@ type AuthMiddlewareOptions struct {
 	Realm       string
 	MaxAttempts int32
 	Debug       bool
+}
+
+var ErrNotAUser = errors.New("user is not *sqlc.User")
+
+// GetCurrentUser gets the current user from the gin context
+// If the user does not exist, user will be nil and exists
+// will be false. If user is not nil, but cannot be
+// converted to *User, it will panic.
+func GetCurrentUser(c *gin.Context) (*sqlc.User, bool) {
+	value, exists := c.Get("user")
+	if !exists {
+		return nil, false
+	}
+	user, ok := value.(*sqlc.User)
+	if !ok {
+		panic(ErrNotAUser)
+	}
+	return user, true
 }
 
 // AuthMiddleware returns a custom basic authentication middleware with fail2ban

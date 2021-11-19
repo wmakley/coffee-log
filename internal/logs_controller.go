@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"coffee-log/db/sqlc"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -21,7 +20,7 @@ type ShowLogParams struct {
 	LogID string `uri:"log_id" binding:"required"`
 }
 
-func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
+func (controller *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 	params := ShowLogParams{}
 	if err := c.ShouldBindUri(&params); err != nil {
 		c.Error(err)
@@ -29,7 +28,7 @@ func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 		return
 	}
 
-	store := StoreFromCtx(c, con.db)
+	store := StoreFromCtx(c, controller.db)
 
 	log, err := store.GetLogBySlug(c, params.LogID)
 	if err != nil {
@@ -45,27 +44,14 @@ func (con *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/logs/"+log.Slug+"/entries/")
 }
 
-func (con *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Context) {
-	userRaw, ok := c.Get("user")
-	if !ok {
+func (controller *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Context) {
+	user, exists := GetCurrentUser(c)
+	if !exists {
 		panic("user not set")
 	}
-	user, ok := userRaw.(*sqlc.User)
-	if !ok {
-		panic("user is not *sqlc.User")
-	}
+	store := StoreFromCtx(c, controller.db)
 
-	store := StoreFromCtx(c, con.db)
-
-	log, err := store.GetLogByUserId(c, user.ID)
-
-	if err == sql.ErrNoRows {
-		log, err = store.CreateLog(c, sqlc.CreateLogParams{
-			UserID: user.ID,
-			Slug:   user.Username,
-		})
-	}
-
+	log, err := store.FindOrCreateLogForUser(c, user)
 	if err != nil {
 		c.String(http.StatusInternalServerError, errorResponse(err))
 		return

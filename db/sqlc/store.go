@@ -222,3 +222,25 @@ func (store *Store) DeleteAllLoginAttemptsAndBans(ctx context.Context) error {
 		return store.DeleteAllLoginAttempts(ctx)
 	})
 }
+
+func (store *Store) FindOrCreateLogForUser(ctx context.Context, user *User) (Log, error) {
+	var userLog Log
+
+	err := store.transaction(ctx, func(store *Store) error {
+		var err error
+		userLog, err = store.GetLogByUserId(ctx, user.ID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				userLog, err = store.CreateLog(ctx, CreateLogParams{
+					UserID: user.ID,
+					Slug:   user.Username,
+				})
+			}
+			return err
+		}
+
+		return nil
+	})
+
+	return userLog, err
+}

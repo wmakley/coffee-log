@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"testing"
 	"math/rand"
+	"testing"
 )
 
 var ErrRollback = errors.New("rollback")
@@ -20,7 +20,7 @@ func Rollback(t *testing.T, db *sql.DB, fn func(context.Context, *Store)) {
 		fn(context.WithValue(ctx, "tx", store.tx), store)
 		return ErrRollback
 	})
-	t.Log("rolled back transaction")
+	//t.Log("rolled back transaction")
 }
 
 func RandomIP() string {

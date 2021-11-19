@@ -1,12 +1,13 @@
 package sqlc
 
 import (
+	"coffee-log/util"
 	"context"
 	"database/sql"
 	"fmt"
 	"github.com/joho/godotenv"
-	"github.com/stretchr/testify/require"
 	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/require"
 	"log"
 	"math/rand"
 	"os"
@@ -77,3 +78,47 @@ func TestCheckAndLogLoginAttempt_BadCredentials(t *testing.T) {
 		require.ErrorIs(t, err, ErrIPBanned)
 	})
 }
+
+func TestFindOrCreateLogForUser(t *testing.T) {
+	Rollback(t, db, func(c context.Context, store *Store) {
+		user, err := store.CreateUser(c, RandomUser())
+		require.NoError(t, err)
+
+		newLog, err := store.FindOrCreateLogForUser(c, &user)
+		require.NoError(t, err)
+		require.Greater(t, newLog.ID, int64(0))
+
+		newLog, err = store.GetLog(c, newLog.ID)
+		require.NoError(t, err)
+		require.Equal(t, newLog.UserID, user.ID)
+		require.Equal(t, newLog.Slug, user.Username)
+	})
+
+	Rollback(t, db, func(c context.Context, store *Store) {
+		user, err := store.CreateUser(c, RandomUser())
+		require.NoError(t, err)
+		testLog, err := store.CreateLog(c, CreateLogParams{
+			UserID: user.ID,
+			Slug:   user.Username,
+		})
+		require.NoError(t, err)
+		require.Greater(t, testLog.ID, int64(0))
+
+		userLog, err := store.FindOrCreateLogForUser(c, &user)
+		require.NoError(t, err)
+		require.Equal(t, testLog.ID, userLog.ID)
+	})
+}
+
+func RandomUser() CreateUserParams {
+	return CreateUserParams{
+		DisplayName: "Test Testerson",
+		Username:    util.RandomUsername(),
+		Password:    util.RandomPassword(),
+		TimeZone:    sql.NullString{
+			String: "EST",
+			Valid: true,
+		},
+	}
+}
+
