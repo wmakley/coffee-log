@@ -17,11 +17,15 @@ type LogsController struct {
 	db *sql.DB
 }
 
+func (controller *LogsController) Index(c *gin.Context) {
+	controller.FindOrCreateLogForUserAndRedirectToEntries(c)
+}
+
 type ShowLogParams struct {
 	LogID string `uri:"log_id" binding:"required"`
 }
 
-func (controller *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
+func (controller *LogsController) Show(c *gin.Context) {
 	params := ShowLogParams{}
 	if err := c.ShouldBindUri(&params); err != nil {
 		c.Error(err)
@@ -29,9 +33,13 @@ func (controller *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 		return
 	}
 
+	controller.findLogAndRedirectToEntries(c, params.LogID)
+}
+
+func (controller *LogsController) findLogAndRedirectToEntries(c *gin.Context, slug string) {
 	store := middleware.StoreFromCtx(c, controller.db)
 
-	log, err := store.GetLogBySlug(c, params.LogID)
+	log, err := store.GetLogBySlug(c, slug)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.String(http.StatusNotFound, "log not found")

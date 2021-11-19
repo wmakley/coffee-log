@@ -23,7 +23,7 @@ type LogEntriesIndexParams struct {
 	LogID string `uri:"log_id" binding:"required"`
 }
 
-func (o *LogEntriesController) Index(c *gin.Context) {
+func (controller *LogEntriesController) Index(c *gin.Context) {
 	var params LogEntriesIndexParams
 	if err := c.ShouldBindUri(&params); err != nil {
 		c.Error(err)
@@ -31,7 +31,7 @@ func (o *LogEntriesController) Index(c *gin.Context) {
 		return
 	}
 
-	store := middleware.StoreFromCtx(c, o.db)
+	store := middleware.StoreFromCtx(c, controller.db)
 
 	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.LogID)
 	if err != nil {
@@ -68,51 +68,63 @@ func (o *LogEntriesController) Index(c *gin.Context) {
 }
 
 type ShowLogEntryParams struct {
-	ShowLogParams
-	id int64 `uri:"id"`
+	LogEntriesIndexParams
+	ID int64 `uri:"id" binding:"required"`
 }
 
-func (o *LogEntriesController) Show(ctx *gin.Context) {
+func (controller *LogEntriesController) Show(c *gin.Context) {
 	params := ShowLogEntryParams{}
-	if err := ctx.ShouldBindUri(&params); err != nil {
-		ctx.Error(err)
-		ctx.String(http.StatusNotFound, errorResponse(err))
+	if err := c.ShouldBindUri(&params); err != nil {
+		c.Error(err)
+		c.String(http.StatusNotFound, errorResponse(err))
 		return
 	}
 }
 
-func (o *LogEntriesController) Create(ctx *gin.Context) {
+func (controller *LogEntriesController) Create(c *gin.Context) {
+	store := middleware.StoreFromCtx(c, controller.db)
+
 	var params LogEntriesIndexParams
-	if err := ctx.ShouldBindUri(&params); err != nil {
-		ctx.Error(err)
-		ctx.String(http.StatusNotFound, errorResponse(err))
+	if err := c.ShouldBindUri(&params); err != nil {
+		c.Error(err)
+		c.String(http.StatusNotFound, errorResponse(err))
 		return
 	}
 
 	var entryForm form.LogEntryForm
-	if err := ctx.ShouldBind(&entryForm); err != nil {
-		ctx.Error(err)
-		ctx.String(http.StatusUnprocessableEntity, errorResponse(err))
+	if err := c.ShouldBind(&entryForm); err != nil {
+		c.Error(err)
+		c.String(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
 
-	store := middleware.StoreFromCtx(ctx, o.db)
-
 	arg := entryForm.CreateParams()
 
-	log_, logEntry, err := store.CreateLogEntry(ctx, params.LogID, arg)
+	log_, logEntry, err := store.CreateLogEntry(c, params.LogID, arg)
 	if err != nil {
-		ctx.Error(err)
+		c.Error(err)
 		if err == sql.ErrNoRows {
-			ctx.String(http.StatusNotFound, "log '%s' not found", params.LogID)
+			c.String(http.StatusNotFound, "log '%s' not found", params.LogID)
 		} else {
-			ctx.String(http.StatusInternalServerError, errorResponse(err))
+			c.String(http.StatusInternalServerError, errorResponse(err))
 		}
 		return
 	}
 
-	ctx.HTML(http.StatusOK, "entries/index.tmpl", gin.H{
+	c.HTML(http.StatusOK, "entries/index.tmpl", gin.H{
 		"Log":             log_,
 		"CreatedLogEntry": logEntry,
 	})
+}
+
+func (controller *LogEntriesController) Edit(c *gin.Context) {
+	// TODO
+}
+
+func (controller *LogEntriesController) Update(c *gin.Context) {
+	// TODO
+}
+
+func (controller *LogEntriesController) Delete(c *gin.Context) {
+	// TODO
 }

@@ -49,15 +49,19 @@ func NewServer(config *ServerConfig) *Server {
 
 	logs := r.Group("/logs")
 	{
-		logs.GET("/", logsController.FindOrCreateLogForUserAndRedirectToEntries)
-		logs.GET("/:log_id", logsController.FindLogAndRedirectToEntries)
+		logs.GET("/", logsController.Index)
+		logs.GET("/:log_id", logsController.Show)
 	}
 
 	logEntries := logs.Group("/:log_id/entries")
 	{
 		logEntriesController := controller.NewLogEntriesController(config.DB)
 		logEntries.GET("/", logEntriesController.Index)
+		logEntries.GET("/:id", logEntriesController.Show)
 		logEntries.POST("/", logEntriesController.Create)
+		logEntries.GET("/:id/edit", logEntriesController.Edit)
+		logEntries.PATCH("/:id", logEntriesController.Update)
+		logEntries.DELETE("/:id", logEntriesController.Delete)
 	}
 
 	return &server
