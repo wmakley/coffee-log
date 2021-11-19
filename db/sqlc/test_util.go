@@ -1,12 +1,14 @@
 package sqlc
 
 import (
+	"coffee-log/util"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 var ErrRollback = errors.New("rollback")
@@ -26,4 +28,24 @@ func Rollback(t *testing.T, db *sql.DB, fn func(context.Context, *Store)) {
 func RandomIP() string {
 	ip := rand.Int31()
 	return fmt.Sprintf("%d", ip)
+}
+
+func RandomUser() CreateUserParams {
+	return CreateUserParams{
+		DisplayName: "Test Testerson",
+		Username:    util.RandomUsername(),
+		Password:    util.RandomPassword(),
+		TimeZone:    sql.NullString{
+			String: "EST",
+			Valid: true,
+		},
+	}
+}
+
+func ValidLogEntry(logID int64) CreateLogEntryParams {
+	return CreateLogEntryParams{
+		LogID: logID,
+		EntryDate: time.Now(),
+		Coffee: util.RandomString(8),
+	}
 }

@@ -1,7 +1,6 @@
 package sqlc
 
 import (
-	"coffee-log/util"
 	"context"
 	"database/sql"
 	"fmt"
@@ -109,16 +108,3 @@ func TestFindOrCreateLogForUser(t *testing.T) {
 		require.Equal(t, testLog.ID, userLog.ID)
 	})
 }
-
-func RandomUser() CreateUserParams {
-	return CreateUserParams{
-		DisplayName: "Test Testerson",
-		Username:    util.RandomUsername(),
-		Password:    util.RandomPassword(),
-		TimeZone:    sql.NullString{
-			String: "EST",
-			Valid: true,
-		},
-	}
-}
-

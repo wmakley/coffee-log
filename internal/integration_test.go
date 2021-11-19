@@ -13,7 +13,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 )
 
 var (
@@ -97,18 +96,7 @@ func TestLogEntriesShow(t *testing.T) {
 	userLog, err := store.FindOrCreateLogForUser(ctx, &user)
 	require.NoError(t, err)
 
-	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.CreateLogEntryParams{
-		LogID:        userLog.ID,
-		EntryDate:    time.Now(),
-		Coffee:       "Starbucks",
-		Water:        sql.NullString{},
-		BrewMethod:   sql.NullString{},
-		GrindNotes:   sql.NullString{},
-		TastingNotes: sql.NullString{},
-		AddlNotes:    sql.NullString{},
-		CoffeeGrams:  sql.NullInt32{},
-		WaterGrams:   sql.NullInt32{},
-	})
+	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.ValidLogEntry(userLog.ID))
 	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
@@ -135,18 +123,7 @@ func TestLogEntriesEdit(t *testing.T) {
 	userLog, err := store.FindOrCreateLogForUser(ctx, &user)
 	require.NoError(t, err)
 
-	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.CreateLogEntryParams{
-		LogID:        userLog.ID,
-		EntryDate:    time.Now(),
-		Coffee:       "Starbucks",
-		Water:        sql.NullString{},
-		BrewMethod:   sql.NullString{},
-		GrindNotes:   sql.NullString{},
-		TastingNotes: sql.NullString{},
-		AddlNotes:    sql.NullString{},
-		CoffeeGrams:  sql.NullInt32{},
-		WaterGrams:   sql.NullInt32{},
-	})
+	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.ValidLogEntry(user.ID))
 	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
@@ -173,18 +150,7 @@ func TestLogEntriesDelete(t *testing.T) {
 	userLog, err := store.FindOrCreateLogForUser(ctx, &user)
 	require.NoError(t, err)
 
-	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.CreateLogEntryParams{
-		LogID:        userLog.ID,
-		EntryDate:    time.Now(),
-		Coffee:       "Starbucks",
-		Water:        sql.NullString{},
-		BrewMethod:   sql.NullString{},
-		GrindNotes:   sql.NullString{},
-		TastingNotes: sql.NullString{},
-		AddlNotes:    sql.NullString{},
-		CoffeeGrams:  sql.NullInt32{},
-		WaterGrams:   sql.NullInt32{},
-	})
+	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.ValidLogEntry(userLog.ID))
 	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
