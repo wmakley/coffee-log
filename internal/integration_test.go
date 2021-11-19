@@ -82,6 +82,37 @@ func TestRootPathRedirectsToLogEntries(t *testing.T) {
 	require.Equal(t, "text/html; charset=utf-8", res.Header.Get("content-type"))
 }
 
+func TestLogEntriesIndex(t *testing.T) {
+	ctx := context.Background()
+	store := sqlc.NewStore(db)
+
+	user, err := store.CreateUser(ctx, sqlc.CreateUserParams{
+		DisplayName: "Test",
+		Username:    util.RandomUsername(),
+		Password:    util.RandomPassword(),
+	})
+	require.NoError(t, err)
+
+	userLog, err := store.FindOrCreateLogForUser(ctx, &user)
+	require.NoError(t, err)
+
+	_, entry, err := store.CreateLogEntry(ctx, userLog.Slug, sqlc.ValidLogEntry(userLog.ID))
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := util.NewTestRequest(
+		"GET", fmt.Sprintf("/logs/%s/entries", userLog.Slug), nil,
+		user.BasicCredentials())
+
+	server.ServeHTTP(w, req)
+
+	res := w.Result()
+	require.Equal(t, 200, w.Code)
+	require.Equal(t, "text/html; charset=utf-8", res.Header.Get("content-type"))
+	body := util.ReadBody(t, res)
+	util.AssertContent(t, body, entry.Coffee)
+}
+
 func TestLogEntriesShow(t *testing.T) {
 	ctx := context.Background()
 	store := sqlc.NewStore(db)
@@ -111,6 +142,7 @@ func TestLogEntriesShow(t *testing.T) {
 	require.Equal(t, "text/html; charset=utf-8", res.Header.Get("content-type"))
 	body := util.ReadBody(t, res)
 	util.AssertContent(t, body, "<html")
+	util.AssertContent(t, body, entry.Coffee)
 }
 
 func TestLogEntriesEdit(t *testing.T) {
