@@ -1,11 +1,12 @@
-package internal
+package controller
 
 import (
 	"coffee-log/db/sqlc"
+	"coffee-log/internal/form"
+	"coffee-log/internal/middleware"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
 )
 
 func NewLogEntriesController(db *sql.DB) *LogEntriesController {
@@ -30,7 +31,7 @@ func (o *LogEntriesController) Index(c *gin.Context) {
 		return
 	}
 
-	store := StoreFromCtx(c, o.db)
+	store := middleware.StoreFromCtx(c, o.db)
 
 	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.LogID)
 	if err != nil {
@@ -48,7 +49,7 @@ func (o *LogEntriesController) Index(c *gin.Context) {
 		lastEntry = entries[0]
 	}
 
-	createEntryForm := NewLogEntryForm{
+	createEntryForm := form.LogEntryForm{
 		Coffee:       lastEntry.Coffee,
 		Water:        lastEntry.Water.String,
 		BrewMethod:   lastEntry.BrewMethod.String,
@@ -88,33 +89,16 @@ func (o *LogEntriesController) Create(ctx *gin.Context) {
 		return
 	}
 
-	var form NewLogEntryForm
-	if err := ctx.ShouldBind(&form); err != nil {
+	var entryForm form.LogEntryForm
+	if err := ctx.ShouldBind(&entryForm); err != nil {
 		ctx.Error(err)
 		ctx.String(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
 
-	store := StoreFromCtx(ctx, o.db)
+	store := middleware.StoreFromCtx(ctx, o.db)
 
-	arg := sqlc.CreateLogEntryParams{
-		LogID:        0,
-		EntryDate:    time.Now(),
-		Coffee:       form.Coffee,
-		Water:        blankToNullString(form.Water),
-		BrewMethod:   blankToNullString(form.BrewMethod),
-		GrindNotes:   blankToNullString(form.GrindNotes),
-		TastingNotes: blankToNullString(form.TastingNotes),
-		AddlNotes:    blankToNullString(form.AddlNotes),
-		CoffeeGrams: sql.NullInt32{
-			Int32: form.CoffeeGrams,
-			Valid: form.CoffeeGrams > 0,
-		},
-		WaterGrams: sql.NullInt32{
-			Int32: form.WaterGrams,
-			Valid: form.WaterGrams > 0,
-		},
-	}
+	arg := entryForm.CreateParams()
 
 	log_, logEntry, err := store.CreateLogEntry(ctx, params.LogID, arg)
 	if err != nil {

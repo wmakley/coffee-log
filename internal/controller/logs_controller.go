@@ -1,6 +1,7 @@
-package internal
+package controller
 
 import (
+	"coffee-log/internal/middleware"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -28,7 +29,7 @@ func (controller *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 		return
 	}
 
-	store := StoreFromCtx(c, controller.db)
+	store := middleware.StoreFromCtx(c, controller.db)
 
 	log, err := store.GetLogBySlug(c, params.LogID)
 	if err != nil {
@@ -45,11 +46,11 @@ func (controller *LogsController) FindLogAndRedirectToEntries(c *gin.Context) {
 }
 
 func (controller *LogsController) FindOrCreateLogForUserAndRedirectToEntries(c *gin.Context) {
-	user, exists := GetCurrentUser(c)
+	user, exists := middleware.GetCurrentUser(c)
 	if !exists {
 		panic("user not set")
 	}
-	store := StoreFromCtx(c, controller.db)
+	store := middleware.StoreFromCtx(c, controller.db)
 
 	log, err := store.FindOrCreateLogForUser(c, user)
 	if err != nil {

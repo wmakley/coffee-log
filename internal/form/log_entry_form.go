@@ -1,12 +1,14 @@
-package internal
+package form
 
 import (
+	"coffee-log/db/sqlc"
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 )
 
-type NewLogEntryForm struct {
+type LogEntryForm struct {
 	LogID        int64  `form:"log_id"`
 	Coffee       string `form:"coffee"`
 	Water        string `form:"water"`
@@ -38,5 +40,26 @@ func blankToNullString(input string) sql.NullString {
 	return sql.NullString{
 		String: input,
 		Valid:  true,
+	}
+}
+
+func (form *LogEntryForm)CreateParams() sqlc.CreateLogEntryParams {
+	return sqlc.CreateLogEntryParams{
+		LogID:        0,
+		EntryDate:    time.Now(),
+		Coffee:       form.Coffee,
+		Water:        blankToNullString(form.Water),
+		BrewMethod:   blankToNullString(form.BrewMethod),
+		GrindNotes:   blankToNullString(form.GrindNotes),
+		TastingNotes: blankToNullString(form.TastingNotes),
+		AddlNotes:    blankToNullString(form.AddlNotes),
+		CoffeeGrams: sql.NullInt32{
+			Int32: form.CoffeeGrams,
+			Valid: form.CoffeeGrams > 0,
+		},
+		WaterGrams: sql.NullInt32{
+			Int32: form.WaterGrams,
+			Valid: form.WaterGrams > 0,
+		},
 	}
 }

@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"coffee-log/internal/controller"
+	"coffee-log/internal/middleware"
 	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -33,15 +35,15 @@ func NewServer(config *ServerConfig) *Server {
 		ReadOnly:  false,
 	}
 
-	r.Use(RequestTransaction(config.DB, &txOptions, config.Debug))
-	r.Use(AuthMiddleware(AuthMiddlewareOptions{
+	r.Use(middleware.RequestTransaction(config.DB, &txOptions, config.Debug))
+	r.Use(middleware.AuthMiddleware(middleware.AuthMiddlewareOptions{
 		Realm:       "Coffee Log",
 		MaxAttempts: 10,
 		Debug:       config.Debug,
 		DbConn:      config.DB,
 	}))
 
-	logsController := NewLogsController(config.DB)
+	logsController := controller.NewLogsController(config.DB)
 
 	r.GET("/", logsController.FindOrCreateLogForUserAndRedirectToEntries)
 
@@ -53,7 +55,7 @@ func NewServer(config *ServerConfig) *Server {
 
 	logEntries := logs.Group("/:log_id/entries")
 	{
-		logEntriesController := NewLogEntriesController(config.DB)
+		logEntriesController := controller.NewLogEntriesController(config.DB)
 		logEntries.GET("/", logEntriesController.Index)
 		logEntries.POST("/", logEntriesController.Create)
 	}
