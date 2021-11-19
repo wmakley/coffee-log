@@ -106,7 +106,11 @@ func TestLogEntriesShow(t *testing.T) {
 
 	server.ServeHTTP(w, req)
 
+	res := w.Result()
 	require.Equal(t, 200, w.Code)
+	require.Equal(t, "text/html; charset=utf-8", res.Header.Get("content-type"))
+	body := util.ReadBody(t, res)
+	util.AssertContent(t, body, "<html")
 }
 
 func TestLogEntriesEdit(t *testing.T) {
@@ -133,7 +137,11 @@ func TestLogEntriesEdit(t *testing.T) {
 
 	server.ServeHTTP(w, req)
 
+	res := w.Result()
 	require.Equal(t, 200, w.Code)
+	require.Equal(t, "text/html; charset=utf-8", res.Header.Get("content-type"))
+	body := util.ReadBody(t, res)
+	util.AssertContent(t, body, "<html")
 }
 
 func TestLogEntriesDelete(t *testing.T) {
@@ -161,4 +169,5 @@ func TestLogEntriesDelete(t *testing.T) {
 	server.ServeHTTP(w, req)
 
 	require.Equal(t, 200, w.Code)
+	util.AssertRedirectedTo(t, fmt.Sprintf("/logs/%s/entries", userLog.Slug), 302, w.Result())
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -54,10 +55,22 @@ func FollowRedirect(t *testing.T, redirect *http.Response, credentials BasicCred
 	return req
 }
 
-func ReadAndLogBody(t *testing.T, res *http.Response) string {
+func ReadBody(t *testing.T, res *http.Response) string {
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	bodyString := string(body)
-	t.Log("Response Body:", bodyString)
 	return bodyString
+}
+
+func ReadAndLogBody(t *testing.T, res *http.Response) string {
+	body := ReadBody(t, res)
+	t.Log("Response Body:", body)
+	return body
+}
+
+func AssertContent(t *testing.T, body string, content string) {
+	if !strings.Contains(body, content) {
+		t.Errorf("body did not contain: %s", content)
+		t.Log("Body:\n\n", body)
+	}
 }

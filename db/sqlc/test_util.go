@@ -26,8 +26,8 @@ func Rollback(t *testing.T, db *sql.DB, fn func(context.Context, *Store)) {
 }
 
 func RandomIP() string {
-	ip := rand.Int31()
-	return fmt.Sprintf("%d", ip)
+	return fmt.Sprintf("%d.%d.%d.%d",
+		rand.Intn(255), rand.Intn(255), rand.Intn(255), rand.Intn(255))
 }
 
 func RandomUser() CreateUserParams {
@@ -35,17 +35,17 @@ func RandomUser() CreateUserParams {
 		DisplayName: "Test Testerson",
 		Username:    util.RandomUsername(),
 		Password:    util.RandomPassword(),
-		TimeZone:    sql.NullString{
+		TimeZone: sql.NullString{
 			String: "EST",
-			Valid: true,
+			Valid:  true,
 		},
 	}
 }
 
 func ValidLogEntry(logID int64) CreateLogEntryParams {
 	return CreateLogEntryParams{
-		LogID: logID,
+		LogID:     logID,
 		EntryDate: time.Now(),
-		Coffee: util.RandomString(8),
+		Coffee:    util.RandomString(8),
 	}
 }
