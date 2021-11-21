@@ -4,6 +4,7 @@ import (
 	"coffee-log/db/sqlc"
 	"coffee-log/internal/form"
 	"coffee-log/internal/middleware"
+	"coffee-log/internal/view"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -33,7 +34,14 @@ func (controller *LogEntriesController) Index(c *gin.Context) {
 
 	store := middleware.StoreFromCtx(c, controller.db)
 
-	log2, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.LogID)
+	allLogs, err := store.ListLogs(c)
+	if err != nil && err != sql.ErrNoRows {
+		c.Error(err)
+		c.String(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	currentLog, entries, err := store.GetLogAndEntriesBySlugOrderByDateDesc(c, params.LogID)
 	if err != nil {
 		c.Error(err)
 		if err == sql.ErrNoRows {
@@ -60,9 +68,21 @@ func (controller *LogEntriesController) Index(c *gin.Context) {
 		WaterGrams:   lastEntry.WaterGrams.Int32,
 	}
 
+	entryViews := make([]view.LogEntryView, 0, len(entries))
+	for _, entry := range entries {
+		entryViews = append(entryViews, view.NewLogEntryView(entry, false))
+	}
+
+	logTabs := make([]view.LogTab, 0, len(allLogs))
+	for _, log := range allLogs {
+		active := log.ID == currentLog.ID
+		logTabs = append(logTabs, view.NewLogTab(&log, active))
+	}
+
 	c.HTML(http.StatusOK, "entries/index.tmpl", gin.H{
-		"Log":          log2,
-		"Entries":      entries,
+		"LogTabs":      logTabs,
+		"CurrentLog":   currentLog,
+		"Entries":      entryViews,
 		"NewEntryForm": createEntryForm,
 	})
 }

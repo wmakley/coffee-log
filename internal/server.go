@@ -29,6 +29,7 @@ func NewServer(config *ServerConfig) *Server {
 	server.router = r
 
 	r.LoadHTMLGlob(config.TemplateRoot + "templates/**/*")
+	r.Static("/assets", "./assets")
 
 	txOptions := sql.TxOptions{
 		Isolation: sql.LevelRepeatableRead,

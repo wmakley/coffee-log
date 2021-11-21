@@ -1,36 +1,26 @@
-{{ define "entries/index.tmpl" }}
+{{- define "entries/index.tmpl" }}
 <!doctype html>
 <html lang="en">
 <head>
-	{{ template "shared/head.tmpl" . }}
-	<title>Log Entries</title>
+	<title>Coffee Log - {{.CurrentLog.Title}} Entries</title>
+	{{ template "shared/_head.tmpl" . }}
 </head>
 <body>
 <div class="container">
-	<h2>Add Entry</h2>
+	{{ template "shared/_log_tabs.tmpl" . }}
+
+	<h1>{{.CurrentLog.Title}} Entries</h1>
 	{{ template "entries/_form.tmpl" .NewEntryForm }}
-	<h2>Previous Entries</h2>
-	<table>
-		<thead>
-		<tr>
-			<th>Date</th>
-			<th>Coffee</th>
-			<th>Notes</th>
-		</tr>
-		</thead>
-		<tbody>
-		{{ range .Logs }}
-			<tr>
-				<td>{{.CreatedAt}}</td>
-				<td>{{.Coffee}}</td>
-				<td>{{.Notes}}</td>
-			</tr>
+
+	{{ if .Entries }}
+		{{ range .Entries }}
+			{{ template "entries/_entry.tmpl" . }}
 		{{ end }}
-		</tbody>
-	</table>
+	{{ else }}
+		<p id="no_log_entries_message">There are no log entries yet.</p>
+	{{ end }}
 </div>
 {{ template "shared/foot.tmpl" . }}
 </body>
 </html>
-{{ end }}
-
+{{- end }}

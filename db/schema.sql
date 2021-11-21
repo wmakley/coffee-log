@@ -84,6 +84,7 @@ CREATE TABLE public.logs (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
     slug character varying(255) NOT NULL,
+    title character varying(255) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

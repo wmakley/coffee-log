@@ -10,7 +10,7 @@ import (
 const createLog = `-- name: CreateLog :one
 INSERT INTO logs (user_id, slug)
 VALUES ($1, $2)
-RETURNING id, user_id, slug, created_at, updated_at
+RETURNING id, user_id, slug, title, created_at, updated_at
 `
 
 type CreateLogParams struct {
@@ -25,6 +25,7 @@ func (q *Queries) CreateLog(ctx context.Context, arg CreateLogParams) (Log, erro
 		&i.ID,
 		&i.UserID,
 		&i.Slug,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -32,7 +33,7 @@ func (q *Queries) CreateLog(ctx context.Context, arg CreateLogParams) (Log, erro
 }
 
 const getLog = `-- name: GetLog :one
-SELECT id, user_id, slug, created_at, updated_at
+SELECT id, user_id, slug, title, created_at, updated_at
 FROM logs
 WHERE id = $1
 LIMIT 1
@@ -45,6 +46,7 @@ func (q *Queries) GetLog(ctx context.Context, id int64) (Log, error) {
 		&i.ID,
 		&i.UserID,
 		&i.Slug,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -52,7 +54,7 @@ func (q *Queries) GetLog(ctx context.Context, id int64) (Log, error) {
 }
 
 const getLogBySlug = `-- name: GetLogBySlug :one
-SELECT id, user_id, slug, created_at, updated_at
+SELECT id, user_id, slug, title, created_at, updated_at
 FROM logs
 WHERE slug = $1
 LIMIT 1
@@ -65,6 +67,7 @@ func (q *Queries) GetLogBySlug(ctx context.Context, slug string) (Log, error) {
 		&i.ID,
 		&i.UserID,
 		&i.Slug,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -72,7 +75,7 @@ func (q *Queries) GetLogBySlug(ctx context.Context, slug string) (Log, error) {
 }
 
 const getLogByUserId = `-- name: GetLogByUserId :one
-SELECT id, user_id, slug, created_at, updated_at
+SELECT id, user_id, slug, title, created_at, updated_at
 FROM logs
 WHERE user_id = $1
 LIMIT 1
@@ -85,6 +88,7 @@ func (q *Queries) GetLogByUserId(ctx context.Context, userID int64) (Log, error)
 		&i.ID,
 		&i.UserID,
 		&i.Slug,
+		&i.Title,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -92,7 +96,7 @@ func (q *Queries) GetLogByUserId(ctx context.Context, userID int64) (Log, error)
 }
 
 const listLogs = `-- name: ListLogs :many
-SELECT id, user_id, slug, created_at, updated_at
+SELECT id, user_id, slug, title, created_at, updated_at
 FROM logs
 ORDER BY id ASC
 `
@@ -110,6 +114,7 @@ func (q *Queries) ListLogs(ctx context.Context) ([]Log, error) {
 			&i.ID,
 			&i.UserID,
 			&i.Slug,
+			&i.Title,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

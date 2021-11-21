@@ -16,6 +16,7 @@ type Log struct {
 	ID        int64
 	UserID    int64
 	Slug      string
+	Title     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

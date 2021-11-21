@@ -16,6 +16,7 @@ CREATE TABLE logs
 	id         BIGSERIAL PRIMARY KEY,
 	user_id    BIGINT              NOT NULL,
 	slug       VARCHAR(255) UNIQUE NOT NULL,
+	title      VARCHAR(255)        NOT NULL,
 	created_at TIMESTAMPTZ         NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMPTZ         NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT fk_logs_user_id FOREIGN KEY (user_id) REFERENCES users (id)

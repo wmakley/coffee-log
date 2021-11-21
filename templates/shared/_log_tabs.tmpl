@@ -1,0 +1,13 @@
+{{- define "shared/_log_tabs.tmpl" }}
+    {{- if . }}
+		<ul class="nav nav-fill justify-content-center">
+            {{- range . }}
+				<li class="nav-item">
+					<a href="{{.URL}}" class="nav-link{{if .Active}} active{{end}}">
+                        {{.Title}}
+					</a>
+				</li>
+            {{ end }}
+		</ul>
+    {{ end }}
+{{ end }}
