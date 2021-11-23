@@ -22,6 +22,6 @@ WHERE user_id = $1
 LIMIT 1;
 
 -- name: CreateLog :one
-INSERT INTO logs (user_id, slug)
-VALUES ($1, $2)
+INSERT INTO logs (user_id, slug, title)
+VALUES ($1, $2, $3)
 RETURNING *;

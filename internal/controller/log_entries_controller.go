@@ -6,6 +6,7 @@ import (
 	"coffee-log/internal/middleware"
 	"coffee-log/internal/view"
 	"database/sql"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -58,6 +59,7 @@ func (controller *LogEntriesController) Index(c *gin.Context) {
 	}
 
 	createEntryForm := form.LogEntryForm{
+		URL:          fmt.Sprintf("/logs/%s/entries/", currentLog.Slug),
 		Coffee:       lastEntry.Coffee,
 		Water:        lastEntry.Water.String,
 		BrewMethod:   lastEntry.BrewMethod.String,
@@ -69,20 +71,24 @@ func (controller *LogEntriesController) Index(c *gin.Context) {
 	}
 
 	entryViews := make([]view.LogEntryView, 0, len(entries))
-	for _, entry := range entries {
-		entryViews = append(entryViews, view.NewLogEntryView(entry, false))
+	for i := range entries {
+		entryViews = append(entryViews, view.NewLogEntryView(
+			entries[i],
+			currentLog.Slug,
+			false,
+		))
 	}
 
 	logTabs := make([]view.LogTab, 0, len(allLogs))
-	for _, log := range allLogs {
-		active := log.ID == currentLog.ID
-		logTabs = append(logTabs, view.NewLogTab(&log, active))
+	for i := range allLogs {
+		log_ := &allLogs[i]
+		logTabs = append(logTabs, view.NewLogTab(log_, log_.ID == currentLog.ID))
 	}
 
 	c.HTML(http.StatusOK, "entries/index.tmpl", gin.H{
 		"LogTabs":      logTabs,
-		"CurrentLog":   currentLog,
-		"Entries":      entryViews,
+		"Log":          currentLog,
+		"EntryViews":   entryViews,
 		"NewEntryForm": createEntryForm,
 	})
 }

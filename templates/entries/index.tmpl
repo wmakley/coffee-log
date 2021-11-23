@@ -7,20 +7,19 @@
 </head>
 <body>
 <div class="container">
-	{{ template "shared/_log_tabs.tmpl" . }}
+	{{ template "shared/_log_tabs.tmpl" .LogTabs }}
 
 	<h1>{{.CurrentLog.Title}} Entries</h1>
 	{{ template "entries/_form.tmpl" .NewEntryForm }}
 
-	{{ if .Entries }}
-		{{ range .Entries }}
+	{{ if .EntryViews }}
+		{{ range .EntryViews }}
 			{{ template "entries/_entry.tmpl" . }}
 		{{ end }}
 	{{ else }}
 		<p id="no_log_entries_message">There are no log entries yet.</p>
 	{{ end }}
 </div>
-{{ template "shared/foot.tmpl" . }}
 </body>
 </html>
 {{- end }}

@@ -2,12 +2,10 @@ package form
 
 import (
 	"database/sql"
-	"strings"
 )
 
 func blankToNullString(input string) sql.NullString {
-	trimmed := strings.TrimSpace(input)
-	if trimmed == "" {
+	if input == "" {
 		return sql.NullString{
 			String: "",
 			Valid:  false,

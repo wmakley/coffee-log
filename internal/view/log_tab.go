@@ -15,6 +15,6 @@ func NewLogTab(log *sqlc.Log, active bool) LogTab {
 	return LogTab{
 		Title: log.Title,
 		Active: active,
-		URL: fmt.Sprintf("/logs/%s/entries", log.Slug),
+		URL: fmt.Sprintf("/logs/%s/entries/", log.Slug),
 	}
 }

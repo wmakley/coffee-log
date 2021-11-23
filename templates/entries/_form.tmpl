@@ -1,5 +1,5 @@
 {{ define "entries/_form.tmpl" }}
-	<form method="post" action="/logs/{{.LogID}}/entries">
+	<form method="post" action="{{.URL}}">
 		<div class="mb-3">
 			<label for="entry_form_coffee" class="form-label">Coffee</label>
 			<input type="text" class="form-control" id="entry_form_coffee" name="coffee" value="{{.Coffee}}">
@@ -10,11 +10,11 @@
 		</div>
 		<div class="mb-3">
 			<label for="entry_form_method" class="form-label">Method</label>
-			<input type="text" class="form-control" id="entry_form_method" name="method" value="{{.Method}}">
+			<input type="text" class="form-control" id="entry_form_method" name="method" value="{{.BrewMethod}}">
 		</div>
 		<div class="mb-3">
 			<label for="entry_form_grind" class="form-label">Grind</label>
-			<input type="text" class="form-control" id="entry_form_grind" name="grind" value="{{.Grind}}">
+			<input type="text" class="form-control" id="entry_form_grind" name="grind" value="{{.GrindNotes}}">
 		</div>
 	</form>
 {{ end }}

@@ -8,18 +8,19 @@ import (
 )
 
 const createLog = `-- name: CreateLog :one
-INSERT INTO logs (user_id, slug)
-VALUES ($1, $2)
+INSERT INTO logs (user_id, slug, title)
+VALUES ($1, $2, $3)
 RETURNING id, user_id, slug, title, created_at, updated_at
 `
 
 type CreateLogParams struct {
 	UserID int64
 	Slug   string
+	Title  string
 }
 
 func (q *Queries) CreateLog(ctx context.Context, arg CreateLogParams) (Log, error) {
-	row := q.db.QueryRowContext(ctx, createLog, arg.UserID, arg.Slug)
+	row := q.db.QueryRowContext(ctx, createLog, arg.UserID, arg.Slug, arg.Title)
 	var i Log
 	err := row.Scan(
 		&i.ID,

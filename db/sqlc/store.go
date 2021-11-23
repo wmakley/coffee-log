@@ -1,6 +1,7 @@
 package sqlc
 
 import (
+	"coffee-log/util"
 	"context"
 	"database/sql"
 	"errors"
@@ -10,7 +11,7 @@ import (
 
 type Store struct {
 	*Queries
-	db *sql.DB
+	db    *sql.DB
 	tx    *sql.Tx
 	Debug bool
 }
@@ -231,9 +232,14 @@ func (store *Store) FindOrCreateLogForUser(ctx context.Context, user *User) (Log
 		userLog, err = store.GetLogByUserId(ctx, user.ID)
 		if err != nil {
 			if err == sql.ErrNoRows {
+				var slug string
+				if slug, err = util.Sluggify(user.Username); err != nil {
+					return err
+				}
 				userLog, err = store.CreateLog(ctx, CreateLogParams{
 					UserID: user.ID,
-					Slug:   user.Username,
+					Slug:   slug,
+					Title:  fmt.Sprintf("%s's Log", user.DisplayName),
 				})
 			}
 			return err
